@@ -15,8 +15,6 @@
  */
 package com.google.idea.blaze.android.sync.importer;
 
-import static java.util.stream.Collectors.toCollection;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ComparisonChain;
@@ -46,6 +44,9 @@ import com.google.idea.blaze.base.scope.output.PerformanceWarning;
 import com.google.idea.blaze.common.Output;
 import com.google.idea.common.experiments.BoolExperiment;
 import com.intellij.openapi.project.Project;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -58,8 +59,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import static java.util.stream.Collectors.toCollection;
 
 /** Builds a BlazeWorkspace. */
 public class BlazeAndroidWorkspaceImporter {
@@ -280,7 +281,8 @@ public class BlazeAndroidWorkspaceImporter {
 
   public static boolean isSourceOrAllowedGenPath(
       ArtifactLocation artifactLocation, Predicate<ArtifactLocation> allowlistTest) {
-    return artifactLocation.isSource() || allowlistTest.test(artifactLocation);
+    return true; // TODO: TEST: remove later
+    //return artifactLocation.isSource() || allowlistTest.test(artifactLocation);
   }
 
   private ImmutableList<AndroidResourceModule> buildAndroidResourceModules(
@@ -469,6 +471,24 @@ public class BlazeAndroidWorkspaceImporter {
 
       String libraryKey =
           LibraryKey.libraryNameFromArtifactLocation(target.getAndroidAarIdeInfo().getAar());
+
+      //TODO: Should not be hardcoded, this is temp workaround, the package should be inferred properly, possibly from the manifest.xml?
+      if(target.toString().equals("@maven//:androidx_lifecycle_lifecycle_runtime")) {
+        resourcePackage = "androidx.lifecycle.runtime";
+      }
+      if(target.toString().equals("@maven//:androidx_savedstate_savedstate")) {
+        resourcePackage = "androidx.savedstate";
+      }
+      if(target.toString().equals("@maven//:androidx_lifecycle_lifecycle_viewmodel")) {
+        resourcePackage = "androidx.lifecycle.viewmodel";
+      }
+      if(target.toString().equals("@maven//:androidx_compose_ui_ui")) {
+        resourcePackage = "androidx.compose.ui";
+      }
+      if(target.toString().equals("@maven//:androidx_core_core")) {
+        resourcePackage = "androidx.core";
+      }
+
       if (!aarLibraries.containsKey(libraryKey)) {
         // aar_import should only have one jar (a merged jar from the AAR's jars).
         LibraryArtifact firstJar = target.getJavaIdeInfo().getJars().iterator().next();
