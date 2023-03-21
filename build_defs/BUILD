@@ -1,3 +1,5 @@
+load("//tools/build_defs/testing:bzl_library.bzl", "bzl_library")
+
 # Description:
 #
 # Scripts for building IntelliJ plugins
@@ -44,4 +46,11 @@ py_binary(
     name = "zip_plugin_files",
     srcs = ["zip_plugin_files.py"],
     python_version = "PY3",
+)
+
+bzl_library(
+    name = "intellij_plugin_bzl",
+    srcs = ["intellij_plugin.bzl"],
+    parse_tests = False,
+    visibility = ["//visibility:private"],
 )
