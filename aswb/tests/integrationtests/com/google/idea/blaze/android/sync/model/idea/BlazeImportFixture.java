@@ -196,12 +196,12 @@ public final class BlazeImportFixture {
     return projectView;
   }
 
-  public MavenArtifactLocator getMavenArtifactLocator() {
+    public MavenArtifactLocator getMavenArtifactLocator() {
     if (mavenArtifactLocator == null) {
       mavenArtifactLocator =
           new MavenArtifactLocator() {
             @Override
-            public Label labelFor(GradleCoordinate coordinate) {
+            public Label labelFor(Project project, GradleCoordinate coordinate) {
               switch (GoogleMavenArtifactId.forCoordinate(coordinate)) {
                 case RECYCLERVIEW_V7:
                   return Label.create("//third_party/recyclerview:recyclerview");

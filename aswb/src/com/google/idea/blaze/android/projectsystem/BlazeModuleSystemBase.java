@@ -213,6 +213,10 @@ abstract class BlazeModuleSystemBase implements AndroidModuleSystem {
     }
   }
 
+  public void clearCache() {
+    classFileFinder.clearCache();
+  }
+
   @Nullable
   @Override
   public GradleCoordinate getRegisteredDependency(GradleCoordinate coordinate) {
@@ -246,7 +250,7 @@ abstract class BlazeModuleSystemBase implements AndroidModuleSystem {
   private Label getResolvedLabel(GradleCoordinate coordinate) {
     return MavenArtifactLocator.forBuildSystem(Blaze.getBuildSystemName(module.getProject()))
         .stream()
-        .map(locator -> locator.labelFor(coordinate))
+        .map(locator -> locator.labelFor(module.getProject(), coordinate))
         .map(l -> new Label(l.toString()))
         .findFirst()
         .orElse(null);
@@ -390,7 +394,7 @@ abstract class BlazeModuleSystemBase implements AndroidModuleSystem {
     // labels in order to find them.
     return MavenArtifactLocator.forBuildSystem(Blaze.getBuildSystemName(module.getProject()))
         .stream()
-        .map(locator -> locator.labelFor(coordinate))
+        .map(locator -> locator.labelFor(module.getProject(), coordinate))
         .filter(Objects::nonNull)
         .map(TargetKey::forPlainTarget);
   }

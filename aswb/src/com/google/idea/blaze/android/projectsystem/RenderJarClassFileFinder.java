@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.idea.blaze.android.libraries.RenderJarCache;
 import com.google.idea.blaze.android.sync.model.AndroidResourceModule;
 import com.google.idea.blaze.android.sync.model.AndroidResourceModuleRegistry;
+import com.google.idea.blaze.android.sync.model.idea.BlazeClassJarProvider;
 import com.google.idea.blaze.android.targetmaps.TargetToBinaryMap;
 import com.google.idea.blaze.base.ideinfo.TargetIdeInfo;
 import com.google.idea.blaze.base.ideinfo.TargetKey;
@@ -38,11 +39,15 @@ import com.google.idea.common.experiments.BoolExperiment;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.module.Module;
+import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.JarFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import java.io.File;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,7 +79,7 @@ public class RenderJarClassFileFinder implements ClassFileFinder {
    */
   @VisibleForTesting
   static final BoolExperiment resolveResourceClasses =
-      new BoolExperiment("aswb.resolve.resources.render.jar", false);
+      new BoolExperiment("aswb.resolve.resources.render.jar", true);
 
   private static final Logger log = Logger.getInstance(RenderJarClassFileFinder.class);
 
@@ -97,6 +102,8 @@ public class RenderJarClassFileFinder implements ClassFileFinder {
 
   // true if the current module is the .workspace Module
   private final boolean isWorkspaceModule;
+
+  private Map<String, File> packageJarHint = new HashMap<>();
 
   public RenderJarClassFileFinder(Module module) {
     this.module = module;
@@ -169,12 +176,30 @@ public class RenderJarClassFileFinder implements ClassFileFinder {
     for (TargetKey binaryTarget : binaryTargets) {
       VirtualFile classFile = getClassFromRenderResolveJar(projectData, fqcn, binaryTarget);
       if (classFile != null) {
+        log.warn(String.format("Found class %s in target %s", fqcn, binaryTarget.toString()));
         return classFile;
       }
     }
 
+    VirtualFile moduleClass = searchForFQCNInModule(fqcn);
+    if (moduleClass != null) {
+      return moduleClass;
+    }
+
+    // Fall back to workspace resolution
+    if (!isWorkspaceModule) {
+      Module workspaceModule = ModuleManager.getInstance(project)
+              .findModuleByName(BlazeDataStorage.WORKSPACE_MODULE_NAME);
+      return BlazeModuleSystem.getInstance(workspaceModule).classFileFinder.findClass(fqcn);
+    }
+
     log.warn(String.format("Could not find class `%1$s` (module: `%2$s`)", fqcn, module.getName()));
     return null;
+  }
+
+  public synchronized void clearCache() {
+//    log.warn("clearing cache");
+//    packageJarHint = new HashMap();
   }
 
   @VisibleForTesting
@@ -245,6 +270,41 @@ public class RenderJarClassFileFinder implements ClassFileFinder {
     }
 
     return findClassInJar(renderResolveJarVF, fqcn);
+  }
+
+  @Nullable
+  private VirtualFile searchForFQCNInModule(String fqcn) {
+    String pkg = null;
+    int pkgIdx = fqcn.lastIndexOf('.');
+    if (pkgIdx != -1) {
+      pkg = fqcn.substring(0, pkgIdx);
+    }
+    File hintJar = pkg == null ? null : packageJarHint.get(pkg);
+    if (hintJar != null) {
+      VirtualFile jarVF = VirtualFileSystemProvider.getInstance().getSystem().findFileByIoFile(hintJar);
+      if (jarVF != null) {
+        VirtualFile foundClass = findClassInJar(jarVF, fqcn);
+        if (foundClass != null) {
+          return foundClass;
+        }
+      }
+    }
+    List<File> moduleLibraries = new BlazeClassJarProvider(this.project).getModuleExternalLibraries(module);
+
+    for (File jar : moduleLibraries) {
+      VirtualFile jarVF = VirtualFileSystemProvider.getInstance().getSystem().findFileByIoFile(jar);
+      if (jarVF == null) {
+        continue;
+      }
+      VirtualFile foundClass = findClassInJar(jarVF, fqcn);
+      if (foundClass != null) {
+        if (pkg != null) {
+          packageJarHint.put(pkg, jar);
+        }
+        return foundClass;
+      }
+    }
+    return null;
   }
 
   @Nullable

@@ -234,12 +234,17 @@ public final class BlazeJavaWorkspaceImporter {
       Map<String, BlazeJarLibrary> jdepsPathToLibrary, BlazeJarLibrary library) {
     LibraryArtifact libraryArtifact = library.libraryArtifact;
     ArtifactLocation interfaceJar = libraryArtifact.getInterfaceJar();
-    if (interfaceJar != null) {
-      jdepsPathToLibrary.put(interfaceJar.getRelativePath(), library);
-    }
     ArtifactLocation classJar = libraryArtifact.getClassJar();
     if (classJar != null) {
       jdepsPathToLibrary.put(classJar.getRelativePath(), library);
+    } else if (interfaceJar != null) {
+      jdepsPathToLibrary.put(interfaceJar.getRelativePath(), library);
+    }
+    for (ArtifactLocation sourceJar : libraryArtifact.getSourceJars()) {
+      jdepsPathToLibrary.put(sourceJar.getRelativePath(), library);
+    }
+    for (ArtifactLocation sourceJar : libraryArtifact.getSourceJars()) {
+      jdepsPathToLibrary.put(sourceJar.getRelativePath(), library);
     }
   }
 

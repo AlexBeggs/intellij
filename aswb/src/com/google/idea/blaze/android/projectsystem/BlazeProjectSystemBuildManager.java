@@ -52,6 +52,7 @@ public class BlazeProjectSystemBuildManager implements ProjectSystemBuildManager
     // TODO(b/191937319): Implement incremental builds for individual files
     // Just compile the entire project for now.
     compileProject();
+    BlazeBuildService.getInstance(project).buildFiles(files);
   }
 
   @Override

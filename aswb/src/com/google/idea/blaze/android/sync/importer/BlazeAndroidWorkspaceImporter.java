@@ -280,7 +280,7 @@ public class BlazeAndroidWorkspaceImporter {
 
   public static boolean isSourceOrAllowedGenPath(
       ArtifactLocation artifactLocation, Predicate<ArtifactLocation> allowlistTest) {
-    return artifactLocation.isSource() || allowlistTest.test(artifactLocation);
+    return true;
   }
 
   private ImmutableList<AndroidResourceModule> buildAndroidResourceModules(
